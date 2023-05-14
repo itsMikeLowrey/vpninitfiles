@@ -2,39 +2,41 @@ version: "3.8"
 
 services:
   web:
-    depends_on: [wireguard]
+    depends_on: [wireguard, pihole]
     container_name: web
     image: anonindustries/example_image:latest
+    ports:
+    - "3000:3000/tcp"
     volumes:
-      - wg-data:/app/src/config
+      - wg-data:/app/src/server/config
     networks:
       initTunnel:
         ipv4_address: 10.9.69.11
-  # pihole:
-  #   container_name: pihole
-  #   image: pihole/pihole:latest
-  #   # For DHCP it is recommended to remove these ports and instead add: network_mode: "host"
-  #   ports:
-  #     - "53:53/tcp"
-  #     - "53:53/udp"
-  #     - "67:67/udp" # Only required if you are using Pi-hole as your DHCP server
-  #     - "80:80/tcp"
-  #   environment:
-  #     TZ: 'America/Chicago'
-  #     # WEBPASSWORD: 'set a secure password here or it will be random'
-  #   # Volumes store your data between container upgrades
-  #   volumes:
-  #     - './etc-pihole:/etc/pihole'
-  #     - './etc-dnsmasq.d:/etc/dnsmasq.d'
-  #   #   https://github.com/pi-hole/docker-pi-hole#note-on-capabilities
-  #   cap_add:
-  #     - NET_ADMIN # Required if you are using Pi-hole as your DHCP server, else not needed
-  #   restart: unless-stopped
-  #   networks:
-  #     pihole:
-  #       ipv4_address: 10.8.1.3
+  pihole:
+    container_name: pihole
+    image: pihole/pihole:latest
+    # For DHCP it is recommended to remove these ports and instead add: network_mode: "host"
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+      - "67:67/udp" # Only required if you are using Pi-hole as your DHCP server
+      - "80:80/tcp"
+    environment:
+      TZ: 'America/Chicago'
+      WEBPASSWORD: 'random' # change
+    # Volumes store your data between container upgrades
+    volumes:
+      - './etc-pihole:/etc/pihole'
+      - './etc-dnsmasq.d:/etc/dnsmasq.d'
+    #   https://github.com/pi-hole/docker-pi-hole#note-on-capabilities
+    cap_add:
+      - NET_ADMIN # Required if you are using Pi-hole as your DHCP server, else not needed
+    restart: unless-stopped
+    networks:
+      initTunnel:
+        ipv4_address: 10.9.69.9
   wireguard:
-    # depends_on: [pihole]
+    depends_on: [pihole]
     image: lscr.io/linuxserver/wireguard:latest
     container_name: wireguard
     cap_add:
@@ -46,8 +48,8 @@ services:
       - TZ=Etc/UTC
       - SERVERURL=149.28.226.198 #CHANGE!!!!
       - SERVERPORT=51820 #optional
-      - PEERS=1 #optional
-      - PEERDNS=10.9.69.4 #optional
+      - PEERS=5 #optional
+      - PEERDNS=10.9.69.9 #optional
       - INTERNAL_SUBNET= #10.13.13.0 #optional
       - ALLOWEDIPS=0.0.0.0/0 #optional
       - PERSISTENTKEEPALIVE_PEERS= #optional
@@ -65,10 +67,6 @@ services:
       initTunnel:
         ipv4_address: 10.9.69.3
 networks:
-  # pihole:
-  #   ipam:
-  #     config:
-  #       - subnet: 10.8.1.0/24
   initTunnel:
     ipam:
       config:
